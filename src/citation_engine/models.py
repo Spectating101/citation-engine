@@ -142,6 +142,17 @@ class Decision:
     def authorized(self) -> bool:
         return all(gate.passed for gate in self.gate_results)
 
+    @property
+    def digest(self) -> str:
+        # Decision identity excludes its storage/address id and any later receipt time.
+        return canonical_hash({
+            "subject_ref": self.subject_ref,
+            "outcome": self.outcome,
+            "rule_id": self.rule_id,
+            "gate_results": self.gate_results,
+            "basis_refs": self.basis_refs,
+        })
+
 
 @dataclass(frozen=True)
 class AuthorityTransition:
