@@ -6,7 +6,7 @@
 
 Citation Engine extracts the recurring trust architecture independently implemented across Cite-Agent, Policy Lab, Nocturnal, Hardware Splicer, and Research Drive. Those products remain separate domain systems. They become clients and validation cases for the engine rather than modules compiled into it.
 
-**Status:** extraction seed / internal architecture work. Not a production framework yet.
+**Status:** v0.1 extraction seed with cross-domain fixture validation. Not a production framework yet.
 
 ## Core flow
 
@@ -16,6 +16,8 @@ input / observation
 canonical artifact + provenance
         ↓
 assertions / state
+        ↓
+typed citation / basis edges
         ↓
 explicit uncertainty and unresolved fields
         ↓
@@ -27,7 +29,7 @@ authority transition
         ↓
 output / action
         ↓
-receipt + lineage
+receipt + revision lineage
 ```
 
 ## The invariant
@@ -49,11 +51,14 @@ Can the result be reproduced or challenged?
 
 - canonical `Artifact` identity
 - `Provenance` and parent lineage
+- first-class typed `Citation` edges
 - basis-bound `Assertion`
 - explicit epistemic status
 - deterministic `GateResult`
-- `Decision` with inspectable rule and basis
+- semantic `Decision` identity with inspectable rule and basis
+- ingestion of decisions evaluated by domain runtimes
 - `AuthorityTransition`
+- append-only `RevisionLink`
 - reproducible `Receipt`
 - replaceable canonical store
 - `ContextPack` attachment boundary
@@ -74,15 +79,27 @@ Can the result be reproduced or challenged?
                     │  CITATION ENGINE  │
                     │ Artifact          │
                     │ Provenance        │
+                    │ Citation          │
                     │ Assertion         │
-                    │ Verification      │
                     │ Gate / Decision   │
                     │ Authority         │
+                    │ Revision          │
                     │ Receipt           │
                     └───────────────────┘
 ```
 
-MCP, HTTP, CLI, model calls, compilers, search APIs, sensors, and other external systems are **capability transports/execution backends**. They may retrieve, calculate, simulate, compile, or render. They do not automatically promote observations or hypotheses into authoritative facts.
+MCP, HTTP, CLI, model calls, compilers, search APIs, sensors, policy calculators, and other external systems are **capability transports/execution backends or domain runtimes**. They may retrieve, calculate, simulate, compile, classify, or render. They do not automatically promote observations or hypotheses into authoritative facts.
+
+## Current pressure tests
+
+The neutral core is exercised by thin adapters for four deliberately different clients:
+
+- Cite claim grounding: evidence-backed claims and locator-bearing support edges;
+- Hardware Splicer: physical measurement gates and operational authorization;
+- Nocturnal: append-only corrections and fail-closed publication authorization;
+- Policy Lab: deterministic constraint decisions whose audit receipt may change without changing decision identity.
+
+The adapters live under `examples/packs/`; domain nouns are intentionally absent from `src/citation_engine/`.
 
 ## Non-goals
 
@@ -114,4 +131,4 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/EXTRACTION_MAP.md`](docs/EXTRACTION_MAP.md), and [`docs/PACK_SPEC.md`](docs/PACK_SPEC.md).
+Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/EXTRACTION_MAP.md`](docs/EXTRACTION_MAP.md), [`docs/PACK_SPEC.md`](docs/PACK_SPEC.md), and [`docs/STATUS.md`](docs/STATUS.md).
