@@ -27,6 +27,8 @@ SUPPORTED_TYPES = {
     "AuthorityTransition",
     "Citation",
     "Decision",
+    "GateResult",
+    "Provenance",
     "Receipt",
     "RevisionLink",
 }
@@ -54,8 +56,12 @@ def object_type(value: Any) -> str:
 
 
 def object_refs(value: Any) -> tuple[str, ...]:
-    """Return canonical refs this object depends on."""
-    if isinstance(value, Artifact):
+    """Return canonical refs this object or serialized value depends on."""
+    if isinstance(value, Provenance):
+        refs = value.parent_refs
+    elif isinstance(value, GateResult):
+        refs = value.basis_refs
+    elif isinstance(value, Artifact):
         refs = value.provenance.parent_refs
     elif isinstance(value, Citation):
         refs = (value.subject_ref, value.basis_ref)
@@ -126,6 +132,23 @@ def deserialize_object(envelope: Mapping[str, Any]) -> Any:
     data = envelope.get("data")
     if not isinstance(data, Mapping):
         raise ValueError("serialized object data must be a mapping")
+
+    if type_name == "Provenance":
+        return Provenance(
+            source=str(data.get("source") or ""),
+            method=str(data.get("method") or ""),
+            locator=data.get("locator"),
+            captured_at=data.get("captured_at"),
+            parent_refs=tuple(data.get("parent_refs") or ()),
+        )
+
+    if type_name == "GateResult":
+        return GateResult(
+            gate_id=str(data["gate_id"]),
+            passed=bool(data["passed"]),
+            basis_refs=tuple(data.get("basis_refs") or ()),
+            reason=str(data.get("reason") or ""),
+        )
 
     if type_name == "Artifact":
         provenance_data = data.get("provenance") or {}
