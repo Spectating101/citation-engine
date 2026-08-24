@@ -6,7 +6,7 @@
 
 Citation Engine extracts the recurring trust architecture independently implemented across Cite-Agent, Policy Lab, Nocturnal, Hardware Splicer, Research Drive, and Sharpe Alpha. Those products remain separate domain systems. They are clients and adversarial validation cases for the engine rather than modules compiled into it.
 
-**Status:** v0.1 reusable kernel seed after six-domain extraction and Phase 3 persistence/interchange work. Not a production framework yet.
+**Status:** v0.1 reusable kernel seed after six-domain extraction and completed Phase 3 persistence/interchange work. Not a production framework yet.
 
 ## Core flow
 
@@ -132,6 +132,8 @@ Phase 3 then added reuse infrastructure without adding domain ontology:
 - rooted bundle export/import with top-level fingerprinting;
 - `validate_store()` for third-party store conformance;
 - a minimal fresh-project seed example.
+
+The Phase 3 targeted suite passes 18 tests; the same reconstruction plus the original eight neutral invariant tests passes 26. Earlier six-domain adapter pressure tests remain separately validated. See [`docs/STATUS.md`](docs/STATUS.md) for the execution/CI caveat.
 
 The adapters live under `examples/packs/`; domain nouns are intentionally absent from `src/citation_engine/`.
 
