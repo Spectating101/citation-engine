@@ -1,11 +1,11 @@
 # Current Status
 
 **Date:** 2026-08-24  
-**Stage:** v0.1 extraction seed + six-domain pressure test
+**Stage:** v0.1 reusable kernel seed — Phase 3 complete
 
 ## What exists
 
-Citation Engine contains a runnable neutral Python core with:
+Citation Engine now contains a runnable neutral Python kernel with:
 
 - canonical `Artifact` objects and semantic digests;
 - `Provenance` with parent lineage;
@@ -18,81 +18,145 @@ Citation Engine contains a runnable neutral Python core with:
 - operational `AuthorityTransition` separate from epistemic status;
 - append-only `RevisionLink` correction/replacement lineage;
 - reproducible `Receipt` objects;
-- append-only in-memory canonical storage;
-- `ContextPack` attachment boundary.
+- `ContextPack` attachment boundary;
+- `CanonicalStore` protocol;
+- `MemoryStore` for tests/embedding;
+- append-only persistent `JsonlStore`;
+- versioned object/value serialization (`citation-engine.object.v1`);
+- rooted portable graph bundles (`citation-engine.bundle.v1`);
+- reusable `validate_store()` conformance checking;
+- a fresh-project seed example that persists state and exports a receipt bundle.
 
-## Validation
+## Validation history
 
-The first four-domain package previously passed:
+### Six-domain extraction pressure tests
 
-```text
-18 passed in 0.08s
-```
+The earlier extraction sequence established **24 validated invariant/adapter tests across sequential runs**:
 
-The Research Drive / Sharpe additions were then reconstructed against the unchanged core and tested separately:
+- 8 neutral invariants;
+- 4 Cite / Hardware Splicer tests;
+- 6 Nocturnal / Policy Lab tests;
+- 6 Research Drive / Sharpe Alpha tests.
 
-```text
-6 passed in 0.04s
-```
+Those runs established that the neutral model survives scholarly evidence, physical measurement, correction/publication history, deterministic policy decisions, data readiness, and quantitative promotion semantics.
 
-So the current architecture has **24 validated invariant/adapter tests across the sequential validation runs**. The full repository was not cloned in the second run because the execution runtime could not resolve GitHub DNS; the six new tests were run from the exact GitHub file contents against the unchanged core.
+### Phase 3 implementation validation
 
-### Neutral invariants
+Phase 3 added persistence/interchange tests covering:
 
-1. semantic artifact digest does not depend on arbitrary address/id;
-2. assertion cannot exist without basis;
-3. unknown basis cannot enter canonical assertion state;
-4. citation subject and basis must resolve;
-5. failed gate cannot authorize;
-6. decision cannot authorize another subject;
-7. correction/replacement preserves the prior object;
-8. receipt cannot contain dangling references.
+1. round-trip serialization for every canonical stored object;
+2. standalone versioned envelopes for `Provenance` and `GateResult` values;
+3. semantic digest preservation across round-trip;
+4. explicit rejection of unknown object schema versions;
+5. per-object fingerprint mutation detection;
+6. persistent JSONL reopen with identical objects;
+7. append-only/no-silent-overwrite enforcement;
+8. tampered persistent-log detection;
+9. receipt-rooted dependency-closure export;
+10. bundle import into an empty persistent store;
+11. top-level bundle fingerprint mutation detection;
+12. dangling-reference rejection even when the top-level fingerprint is recomputed;
+13. reusable conformance checks for both memory and persistent stores.
 
-### Cite / Hardware Splicer
-
-9. current Cite claim-grounding output maps to Artifact + Assertion + typed Citation;
-10. an ungrounded Cite planning claim is not promoted into a supported assertion;
-11. a Hardware Splicer-style measurement gate can authorize when unit/range evidence closes;
-12. wrong-unit hardware evidence fails closed and cannot authorize.
-
-### Nocturnal / Policy Lab
-
-13. accepted Nocturnal correction preserves the prior record while adding explicit revision and `CORRECTS` lineage;
-14. publishable Nocturnal snapshot advances publication authority only when all declared release gates pass;
-15. missing Nocturnal license / rights / pilot approval remains fail-closed;
-16. Policy Lab `ADMIT_WITH_LIMIT` can enter canonical state without reimplementing its calculators;
-17. Policy Lab receipt metadata may change while semantic decision identity remains stable;
-18. Policy Lab `BLOCKED` remains non-authorizing.
-
-### Research Drive / Sharpe Alpha
-
-19. verified archive/custody evidence does **not** imply query readiness;
-20. model prose cannot upgrade a failed Drive verification into a verified assertion;
-21. Drive query readiness requires both the declared operational state and a resolving path;
-22. attractive Sharpe metrics cannot bypass failed promotion evidence;
-23. deployable Sharpe promotion remains blocked without an evaluated frozen decision;
-24. complete Sharpe promotion evidence can authorize and emit a receipt that preserves frozen-decision lineage.
-
-## Phase 2 result: no new core primitive
-
-Research Drive and Sharpe were chosen to test whether the kernel needed a generic `Readiness` or `Promotion` state.
-
-It does not, at least not yet.
-
-Research Drive already separates neutral inventory from operational activation: metadata-only resources may exist and even have verified custody while remaining non-query-ready. Sharpe similarly separates performance output from provenance/promotion evidence and requires hard gates before live-adjacent promotion.
-
-Both map cleanly as:
+The Phase 3 targeted suite passes:
 
 ```text
-artifact / candidate
-→ evidence or verification assertion
-→ domain gate(s)
-→ decision
-→ optional authority transition
-→ receipt
+18 passed in 0.07s
 ```
 
-The core did **not** change for Phase 2. `Readiness`, `Promotion`, `Dataset`, `Strategy`, model recommendations, and backtest metrics remain domain semantics.
+The same current Phase 3 reconstruction was then run with the original eight neutral invariant tests as a regression set:
+
+```text
+26 passed in 0.06s
+```
+
+The minimal fresh-project example was also executed successfully and emitted:
+
+```text
+citation-engine.bundle.v1
+5-object receipt dependency closure
+canonical.jsonl
+receipt-bundle.json
+```
+
+### Execution limitation
+
+This runtime still cannot DNS-resolve `github.com`, so a literal `git clone` followed by one monolithic `pytest` invocation is unavailable here. The current Phase 3 files were tested from the exact implementation content before/while committing them, and the original invariant regression was rerun against that current reconstruction. The earlier domain-adapter suites remain separately validated rather than being misreported as one current CI run.
+
+## Phase 3 result
+
+The kernel became reusable **without adding any new domain ontology**.
+
+The important new boundary is:
+
+```text
+domain runtime / context pack
+        ↓
+canonical objects + basis refs
+        ↓
+Citation Engine
+        ↓
+append-only canonical store
+        ↓
+receipt-rooted portable bundle
+```
+
+Persistence does not introduce a second database model. `JsonlStore` persists the same versioned canonical objects the engine already uses.
+
+A portable bundle is not a project export. It is the inspectable dependency closure for one or more consequential roots. A receipt bundle can therefore move between systems without bringing Cite, Hardware Splicer, Policy Lab, Nocturnal, Research Drive, or Sharpe code with it.
+
+## Serialization and interchange contract
+
+Object/value schema:
+
+```text
+citation-engine.object.v1
+```
+
+Supported envelopes:
+
+- `Artifact`
+- `Provenance`
+- `Citation`
+- `Assertion`
+- `GateResult`
+- `Decision`
+- `AuthorityTransition`
+- `RevisionLink`
+- `Receipt`
+
+Bundle schema:
+
+```text
+citation-engine.bundle.v1
+```
+
+Import/export fails closed on incompatible versions, mutated object fingerprints, mutated bundle fingerprints, dangling references, canonical-id conflicts, and unresolvable reference cycles.
+
+`Provenance` and `GateResult` have independent interchange envelopes but remain nested values rather than standalone canonical store entities because they do not carry canonical ids.
+
+## Adapter contract
+
+A fresh project can now:
+
+```text
+install Citation Engine
+→ choose MemoryStore or JsonlStore
+→ define a ContextPack / thin adapter
+→ record evidence and consequential subjects
+→ emit basis-bound assertions/citations
+→ evaluate or import domain decisions
+→ advance authority when allowed
+→ issue a receipt
+→ persist canonical state
+→ export an inspectable receipt bundle
+```
+
+See:
+
+- `docs/PACK_SPEC.md`
+- `docs/REUSE.md`
+- `examples/minimal_seed.py`
 
 ## Current real adapters
 
@@ -103,7 +167,7 @@ The core did **not** change for Phase 2. `Readiness`, `Promotion`, `Dataset`, `S
 - `examples/packs/research_drive_adapter.py`
 - `examples/packs/sharpe_promotion_adapter.py`
 
-No Cite, Hardware, Nocturnal, Policy, Drive, Dataset, Sharpe, or Strategy nouns have entered `src/citation_engine/`.
+No Cite, Hardware, Nocturnal, Policy, Drive, Dataset, Sharpe, Strategy, readiness, or promotion nouns have entered the kernel ontology.
 
 ## Architectural conclusion
 
@@ -119,22 +183,24 @@ consequential object
 → advances authority separately
 → preserves revision/history
 → emits reproducible receipt
+→ can carry its dependency graph across systems
 ```
 
 A successful external computation, transfer, model answer, backtest, publication build, or domain decision is evidence about a specific relationship. It is not automatically truth and it is not automatically authority.
 
 ## Next engineering question
 
-The abstraction has now survived six substantially different clients. The next useful work is no longer another domain fixture by default. It should test whether this can become a practical reusable seed:
+The next useful proof should be **real consumption rather than more extraction**: make one existing project use Citation Engine as a dependency for a bounded workflow, while preserving that project's current domain runtime as the authority for domain-specific calculation.
 
-1. stable serialization/versioned envelopes for core objects;
-2. a persistent append-only store behind the current `MemoryStore` interface;
-3. import/export of a complete citation graph/receipt bundle;
-4. a minimal adapter contract/CLI so a new project can attach without copying example code;
-5. conformance tests that every store/adapter implementation must pass.
+A good first integration target should have:
 
-Only add another neutral primitive if implementation pressure from at least two clients demands it.
+- an already-working consequential workflow;
+- clear basis/provenance objects;
+- an existing receipt or audit output that can be mapped without a rewrite;
+- low migration risk and an easy rollback path.
+
+Do not add another neutral primitive merely to make integration convenient.
 
 ## CI limitation
 
-A GitHub Actions workflow is still **not** claimed as installed: the connected GitHub write path previously blocked creation of `.github/workflows/ci.yml`. CI remains a separate repository task.
+A GitHub Actions workflow is still **not** claimed as installed. The connector previously blocked creation under `.github/workflows/`, and the execution runtime cannot clone GitHub directly. CI remains a separate repository task.
