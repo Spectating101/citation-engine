@@ -36,6 +36,18 @@ class CitationEngine:
         self.store.put(assertion.id, assertion)
         return assertion
 
+    def record_decision(self, decision: Decision) -> Decision:
+        """Record a decision evaluated by a domain pack or external deterministic runtime.
+
+        Citation Engine validates the referential/authority boundary but does not
+        reimplement domain calculators merely to own the decision.
+        """
+        self.store.require(decision.subject_ref, *decision.basis_refs)
+        for gate in decision.gate_results:
+            self.store.require(*gate.basis_refs)
+        self.store.put(decision.id, decision)
+        return decision
+
     def evaluate(
         self,
         *,
@@ -56,18 +68,15 @@ class CitationEngine:
         basis_refs = tuple(dict.fromkeys(
             ref for result in gate_results for ref in result.basis_refs
         ))
-        self.store.require(*basis_refs)
 
-        decision = Decision(
+        return self.record_decision(Decision(
             id=decision_id,
             subject_ref=subject_ref,
             outcome="authorized" if all(gate.passed for gate in gate_results) else "blocked",
             rule_id=rule_id,
             gate_results=gate_results,
             basis_refs=basis_refs,
-        )
-        self.store.put(decision.id, decision)
-        return decision
+        ))
 
     def transition_authority(
         self,
