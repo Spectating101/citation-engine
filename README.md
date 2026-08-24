@@ -6,7 +6,7 @@
 
 Citation Engine extracts the recurring trust architecture independently implemented across Cite-Agent, Policy Lab, Nocturnal, Hardware Splicer, Research Drive, and Sharpe Alpha. Those products remain separate domain systems. They are clients and adversarial validation cases for the engine rather than modules compiled into it.
 
-**Status:** v0.1 extraction seed with six-domain fixture validation. Not a production framework yet.
+**Status:** v0.1 reusable kernel seed after six-domain extraction and Phase 3 persistence/interchange work. Not a production framework yet.
 
 ## Core flow
 
@@ -60,8 +60,31 @@ Can the result be reproduced or challenged?
 - `AuthorityTransition`
 - append-only `RevisionLink`
 - reproducible `Receipt`
-- replaceable canonical store
+- `CanonicalStore` attachment contract
+- in-memory and append-only JSONL stores
+- versioned object serialization
+- portable rooted evidence/decision/receipt bundles
 - `ContextPack` attachment boundary
+
+## Reusable kernel surface
+
+```python
+from citation_engine import CitationEngine, JsonlStore
+
+engine = CitationEngine(JsonlStore(".citation-engine/canonical.jsonl"))
+```
+
+Core/value envelopes use `citation-engine.object.v1`. Portable graph bundles use `citation-engine.bundle.v1`.
+
+A receipt can be exported with its complete reference closure:
+
+```python
+from citation_engine import export_bundle
+
+bundle = export_bundle(engine.store, ["receipt:workflow-result"])
+```
+
+See [`docs/REUSE.md`](docs/REUSE.md) and [`examples/minimal_seed.py`](examples/minimal_seed.py).
 
 ## Domain attachment
 
@@ -91,7 +114,7 @@ MCP, HTTP, CLI, model calls, compilers, search APIs, sensors, policy calculators
 
 ## Current pressure tests
 
-The neutral core is exercised by thin adapters for six deliberately different clients:
+The neutral core has been exercised by thin adapters for six deliberately different clients:
 
 - **Cite:** evidence-backed claims and locator-bearing support edges;
 - **Hardware Splicer:** physical measurement gates and operational authorization;
@@ -101,6 +124,14 @@ The neutral core is exercised by thin adapters for six deliberately different cl
 - **Sharpe Alpha:** attractive backtest output kept separate from provenance and promotion authority.
 
 The Research Drive / Sharpe pressure test required **no new core primitive**. Readiness and promotion remain domain gate outcomes rather than kernel state types.
+
+Phase 3 then added reuse infrastructure without adding domain ontology:
+
+- stable versioned envelopes for all core objects/values;
+- append-only `JsonlStore` with fingerprint and referential-integrity checks;
+- rooted bundle export/import with top-level fingerprinting;
+- `validate_store()` for third-party store conformance;
+- a minimal fresh-project seed example.
 
 The adapters live under `examples/packs/`; domain nouns are intentionally absent from `src/citation_engine/`.
 
@@ -135,4 +166,4 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/EXTRACTION_MAP.md`](docs/EXTRACTION_MAP.md), [`docs/PACK_SPEC.md`](docs/PACK_SPEC.md), and [`docs/STATUS.md`](docs/STATUS.md).
+Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/EXTRACTION_MAP.md`](docs/EXTRACTION_MAP.md), [`docs/PACK_SPEC.md`](docs/PACK_SPEC.md), [`docs/REUSE.md`](docs/REUSE.md), and [`docs/STATUS.md`](docs/STATUS.md).
