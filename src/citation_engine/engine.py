@@ -14,12 +14,12 @@ from .models import (
     Receipt,
     RevisionLink,
 )
-from .store import MemoryStore
+from .store import CanonicalStore
 
 
 @dataclass
 class CitationEngine:
-    store: MemoryStore
+    store: CanonicalStore
 
     def record_artifact(self, artifact: Artifact) -> Artifact:
         self.store.require(*artifact.provenance.parent_refs)
