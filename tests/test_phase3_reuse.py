@@ -109,6 +109,24 @@ def test_versioned_object_roundtrip_preserves_semantics(object_id):
         assert restored.digest == original.digest
 
 
+@pytest.mark.parametrize("value", [
+    Provenance(
+        source="fixture",
+        method="direct",
+        locator="row:1",
+        parent_refs=("artifact:source",),
+    ),
+    GateResult(
+        gate_id="fixture",
+        passed=True,
+        basis_refs=("artifact:source",),
+        reason="passes",
+    ),
+])
+def test_nested_core_values_have_versioned_roundtrip_envelopes(value):
+    assert deserialize_object(serialize_object(value)) == value
+
+
 def test_unknown_object_schema_fails_closed():
     engine, _ = seeded(MemoryStore())
     envelope = serialize_object(engine.store.get("artifact:source"))
