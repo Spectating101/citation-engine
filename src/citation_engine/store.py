@@ -8,6 +8,22 @@ from typing import Any, Protocol
 from .serialization import deserialize_object, object_refs, serialize_object
 
 
+def _same_canonical_object(left: Any, right: Any) -> bool:
+    """Compare canonical objects by their versioned serialized semantics.
+
+    JSON persistence normalizes representational details such as tuples into lists.
+    Those shapes are intentionally equivalent under the Citation Engine object
+    schema, so append-only idempotence must use the same semantic representation
+    rather than raw Python dataclass equality.
+    """
+    try:
+        return serialize_object(left)["fingerprint"] == serialize_object(right)["fingerprint"]
+    except (TypeError, ValueError):
+        # Canonical stores should contain supported engine objects, but retain a
+        # conservative equality fallback for lightweight protocol implementations.
+        return left == right
+
+
 class CanonicalStore(Protocol):
     def put(self, object_id: str, value: Any) -> None: ...
     def get(self, object_id: str) -> Any: ...
@@ -23,7 +39,7 @@ class MemoryStore:
     objects: dict[str, Any] = field(default_factory=dict)
 
     def put(self, object_id: str, value: Any) -> None:
-        if object_id in self.objects and self.objects[object_id] != value:
+        if object_id in self.objects and not _same_canonical_object(self.objects[object_id], value):
             raise ValueError(f"refusing silent overwrite of canonical object: {object_id}")
         self.objects[object_id] = value
 
@@ -70,7 +86,7 @@ class JsonlStore:
             object_id = str(getattr(value, "id", "") or "")
             if not object_id:
                 raise ValueError(f"invalid canonical store line {line_no}: object has no id")
-            if object_id in self.objects and self.objects[object_id] != value:
+            if object_id in self.objects and not _same_canonical_object(self.objects[object_id], value):
                 raise ValueError(f"conflicting duplicate canonical object in store: {object_id}")
             self.objects[object_id] = value
         self.validate_references()
@@ -90,7 +106,7 @@ class JsonlStore:
         if actual_id != object_id:
             raise ValueError(f"object id mismatch: key={object_id}, value.id={actual_id}")
         if object_id in self.objects:
-            if self.objects[object_id] != value:
+            if not _same_canonical_object(self.objects[object_id], value):
                 raise ValueError(f"refusing silent overwrite of canonical object: {object_id}")
             return
 
