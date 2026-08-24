@@ -73,6 +73,87 @@ This is the first proof that Citation Engine can become an actual dependency rat
 4. persistent storage can be introduced without forcing Cite to share a database;
 5. the integration reduces future provenance/receipt duplication instead of moving Cite logic into the kernel.
 
+## Consumer 2: Hardware-Splicer golden real authorization
+
+**Repository:** `Spectating101/hardware-splicer`  
+**Candidate:** draft PR #69, branch `citation-engine-shadow`  
+**Seam:** `scripts/verify_splice_real_bench.py` after `run_splice_golden_real()` has produced the native report.
+
+Hardware-Splicer remains authoritative for:
+
+- electrical/interface contracts;
+- KiCad DRC;
+- firmware authorization;
+- physical bench measurement acceptance;
+- power-on authorization;
+- whether a golden-real run is genuinely non-simulated and passed.
+
+Citation Engine imports the already-evaluated Hardware result as six inspectable gates:
+
+```text
+golden-real run
+├─ DRC evidence
+├─ contract-update evidence
+├─ firmware-authority evidence
+├─ bench-submission evidence
+├─ physical power-on evidence
+└─ non-simulated evidence
+       ↓
+external Hardware decision
+       ↓
+optional AUTHORIZED transition
+       ↓
+receipt + portable bundle identity
+```
+
+The bridge checks that Hardware's declared `report.passed` agrees with those six existing conditions. It does not independently calculate electrical truth. A blocked native report remains non-authorizing in Citation Engine.
+
+### Runtime posture
+
+Rollback:
+
+```text
+HARDWARE_SPLICER_CITATION_ENGINE=off
+```
+
+Strict consistency checking:
+
+```text
+HARDWARE_SPLICER_CITATION_ENGINE_STRICT=1
+```
+
+Optional durable canonical log:
+
+```text
+HARDWARE_SPLICER_CITATION_ENGINE_STORE=/path/to/hardware-citation-engine.jsonl
+```
+
+### What this integration tests
+
+The second consumer exercises a materially different kernel path from Cite:
+
+1. domain runtime owns the deterministic decision rather than Citation Engine evaluating the domain;
+2. `record_decision()` can preserve a multi-gate physical authorization basis;
+3. operational authority remains separate from evidence/artifact existence;
+4. blocked outcomes still receive inspectable receipts without creating authority;
+5. identical real-run reports remain idempotent under the persistent store.
+
+Focused local validation: `5 passed` against the exact Phase-3 kernel source. Native Hardware GitHub Actions also starts normally and executes real runner steps on the consumer branch.
+
+## Cross-language observation: Policy Lab / constraint-core
+
+`@solarpunk/constraint-core` is an ES-module package, while the current Citation Engine implementation is Python. Its decision/receipt semantics remain a strong semantic conformance case, but it should **not** gain a hand-copied JavaScript reimplementation merely to count as a consumer.
+
+This creates a legitimate later transport question:
+
+```text
+Python package embedding
+vs
+language-neutral service/protocol/client
+```
+
+Do not solve that by duplicating canonical hashing, bundle validation, and authority semantics independently in every language. The cross-language interface should be extracted only after the two Python consumers prove which operations actually need to cross the boundary.
+
 ## Promotion rule for consumers
 
 Do not make Citation Engine enforcement-critical in a consumer merely because shadow recording works.
@@ -82,5 +163,7 @@ A consumer should move from shadow to enforcement only after:
 - representative real outputs produce semantically faithful traces;
 - failure and rollback behavior are tested;
 - persistent-store behavior is operationally acceptable;
-- another substantially different consumer demonstrates the same kernel contract;
+- at least two substantially different consumers demonstrate the same kernel contract;
 - the domain owner can state exactly which authority transition, if any, Citation Engine is permitted to block.
+
+Cite + Hardware now satisfy the **two substantially different shadow consumers** prerequisite. They do **not** yet satisfy the representative production-output or enforcement-authority prerequisites.
