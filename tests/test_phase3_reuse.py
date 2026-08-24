@@ -153,6 +153,66 @@ def test_jsonl_store_reopens_same_objects(tmp_path):
     assert set(reopened.ids()) == set(engine.store.ids())
 
 
+def test_memory_store_uses_serialized_semantics_for_idempotence():
+    store = MemoryStore()
+    tuple_form = Artifact(
+        id="artifact:nested",
+        kind="nested",
+        payload={"gates": ({"id": "a", "basis": ("x", "y")},)},
+        provenance=Provenance(source="fixture", method="declared"),
+    )
+    json_form = Artifact(
+        id="artifact:nested",
+        kind="nested",
+        payload={"gates": [{"id": "a", "basis": ["x", "y"]}]},
+        provenance=Provenance(source="fixture", method="declared"),
+    )
+    assert tuple_form != json_form
+    assert serialize_object(tuple_form)["fingerprint"] == serialize_object(json_form)["fingerprint"]
+    store.put(tuple_form.id, tuple_form)
+    store.put(json_form.id, json_form)
+
+
+def test_jsonl_store_reinsert_accepts_json_normalized_semantic_equivalent(tmp_path):
+    path = tmp_path / "canonical.jsonl"
+    original = Artifact(
+        id="artifact:nested",
+        kind="nested",
+        payload={"gates": ({"id": "a", "basis": ("x", "y")},)},
+        provenance=Provenance(source="fixture", method="declared"),
+    )
+    store = JsonlStore(path)
+    store.put(original.id, original)
+    original_line_count = len(path.read_text(encoding="utf-8").splitlines())
+
+    reopened = JsonlStore(path)
+    assert reopened.get(original.id) != original  # JSON reload normalizes nested tuples to lists.
+    assert reopened.get(original.id).digest == original.digest
+    reopened.put(original.id, original)
+
+    assert len(path.read_text(encoding="utf-8").splitlines()) == original_line_count
+
+
+def test_jsonl_store_still_rejects_changed_nested_semantics(tmp_path):
+    path = tmp_path / "canonical.jsonl"
+    original = Artifact(
+        id="artifact:nested",
+        kind="nested",
+        payload={"gates": ({"id": "a", "basis": ("x", "y")},)},
+        provenance=Provenance(source="fixture", method="declared"),
+    )
+    JsonlStore(path).put(original.id, original)
+    reopened = JsonlStore(path)
+    changed = Artifact(
+        id=original.id,
+        kind=original.kind,
+        payload={"gates": ({"id": "a", "basis": ("x", "z")},)},
+        provenance=original.provenance,
+    )
+    with pytest.raises(ValueError, match="silent overwrite"):
+        reopened.put(changed.id, changed)
+
+
 def test_jsonl_store_refuses_silent_overwrite(tmp_path):
     path = tmp_path / "canonical.jsonl"
     engine, _ = seeded(JsonlStore(path))
