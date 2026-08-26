@@ -23,6 +23,7 @@ A primitive belongs in Citation Engine only if:
 | **Nocturnal** | evidence grades, strict hash/chain verification, no silent identity merges, append-only corrections/disputes, deterministic public filtering, separate public/intake/operator authority | canonical identity, lineage, `RevisionLink`, fail-closed gates, scoped authority, release receipts/manifests |
 | **Research Drive / YZU Cluster** | durable evidence estate, source vs verification vs readiness as independent axes, source chains/citations, model cannot silently upgrade verification, backend durable consequence | Artifact registry, independent status dimensions, typed citation/provenance edges, explicit promotion authority, durable consequence |
 | **Sharpe / Sharpe Alpha** | older content-agnostic synthesis engine with citation/provenance; newer candidate manifest gates checking provenance and promotion evidence | prior portability attempt, multi-source citation lineage, promotion gates, decision log/manifest boundary |
+| **Refinery Commons** | semantic Capability/Implementation split, exact-subject SLSA/SPDX/OCI evidence, append-only positive/negative claims, explicit curation boundary, software + institutional generalization | exact-subject anti-laundering invariant, semantic-vs-realization identity pressure test, claim/basis separation, recommendation as authority rather than maturity |
 
 ## Important source observations
 
@@ -109,19 +110,33 @@ The newer `sharpe-alpha/alpha/scripts/manifest_gates.py` checks candidate manife
 
 **Extraction:** LLM consensus/synthesis should become a context-pack capability; provenance and promotion mechanics belong below it.
 
+### Refinery Commons: exact subject before global conclusion
+
+The current Commons line separates a semantic capability contract from one or more concrete realizations. It then attaches evaluation, provenance, rights, security, demand, deployment, usage, stewardship, and curation evidence to exact subjects rather than a vague project container.
+
+The strongest adverse finding is `MEV0-001`: early SLSA/SPDX attachment at project scope could launder one release's evidence onto sibling implementations. The repair requires explicit subject binding and can require exact SHA-256 agreement. A verified OCI artifact therefore does not verify a sibling Git realization.
+
+The same Commons grammar also survived a real institutional coral-restoration / conservation-finance case without requiring a new canonical institutional object, while preserving activity/effectiveness and program-existence/current-availability boundaries.
+
+**Extraction:** evidence scope is part of epistemic correctness. Evidence attached to subject X must not silently confer verification or authority on related subject Y.
+
+A second useful pressure test is semantic identity versus concrete realization identity. Citation Engine can currently represent both as domain Artifacts, but the structural `realizes` relationship is not itself an evidentiary citation. The current adapter therefore uses provenance parent closure only as a bounded integration technique; it does **not** justify a new core relation primitive yet.
+
+See `docs/REFINERY_INTEGRATION.md` and `examples/packs/refinery_commons_adapter.py`.
+
 ## Candidate primitives and evidence count
 
 | Primitive | Independent systems supporting extraction |
 |---|---|
-| canonical artifact / stable identity | Policy Lab, Nocturnal, Research Drive, Hardware Splicer |
-| provenance / parent lineage | all major systems above |
-| typed citation / basis edge | Cite, Policy Lab, Nocturnal, Research Drive, Sharpe |
-| assertion with explicit epistemic posture | Cite, Policy Lab, Hardware Splicer, Nocturnal |
-| deterministic/bounded gate | Policy Lab, Hardware Splicer, Nocturnal, Sharpe Alpha |
-| authority transition | Hardware Splicer, Nocturnal, Policy Lab, Research Drive |
-| append-only revision/correction | Nocturnal, Policy Lab versioning, Research Drive durable history, Cite downstream stale obligations |
-| receipt / reproducibility artifact | Policy Lab, Hardware Splicer, Nocturnal; implicit in research workflows |
-| context/capability pack boundary | Cite MCP, Hardware Splicer backends, Nocturnal integrations, Research Drive/Cite intelligence, older Sharpe engine |
+| canonical artifact / stable identity | Policy Lab, Nocturnal, Research Drive, Hardware Splicer, Refinery |
+| provenance / parent lineage | all major systems above, including Refinery machine evidence |
+| typed citation / basis edge | Cite, Policy Lab, Nocturnal, Research Drive, Sharpe, Refinery adapter |
+| assertion with explicit epistemic posture | Cite, Policy Lab, Hardware Splicer, Nocturnal, Refinery claims |
+| deterministic/bounded gate | Policy Lab, Hardware Splicer, Nocturnal, Sharpe Alpha, Refinery curation/admission |
+| authority transition | Hardware Splicer, Nocturnal, Policy Lab, Research Drive; Refinery recommendation maps cleanly onto it |
+| append-only revision/correction | Nocturnal, Policy Lab versioning, Research Drive durable history, Cite downstream stale obligations, Refinery positive/negative coexistence |
+| receipt / reproducibility artifact | Policy Lab, Hardware Splicer, Nocturnal; implicit in research workflows; Refinery review bundles map cleanly |
+| context/capability pack boundary | Cite MCP, Hardware Splicer backends, Nocturnal integrations, Research Drive/Cite intelligence, older Sharpe engine, Refinery Commons adapter |
 
 ## What is intentionally **not** extracted yet
 
@@ -131,10 +146,13 @@ The following are common features but not yet proven neutral mechanics at the re
 - generic vector search;
 - generic scoring/confidence aggregation;
 - generic identity resolution;
+- generic structural `Relation` graph / semantic-realization ontology;
 - generic workflow DSL;
 - one shared database;
 - one UI shell;
 - one universal evidence-quality taxonomy.
+
+The Refinery integration specifically does **not** promote `Capability`, `Implementation`, evidence maturity, recommendation, SLSA, SPDX, OCI, or institutional concepts into the kernel. A generic structural relation should only be added after the existing representation fails in at least one additional domain with the same noun-free need.
 
 These remain domain/client responsibilities until repeated implementations prove a genuinely common contract.
 
@@ -149,6 +167,7 @@ Nocturnal Pack   → matters, identities, correction/publication rules
 Hardware Pack    → donor interfaces, measurements, bench/power gates
 Research Pack    → dataset assets, source/verification/readiness rules
 Sharpe Pack      → candidate manifests, backtests, promotion gates
+Refinery Pack    → capability contracts, realizations, exact-subject evidence, curation gates
 ```
 
-If the core ever needs `Paper`, `Circuit`, `Matter`, `Policy`, `Dataset`, or `Security`, stop and move that concept back into its pack.
+If the core ever needs `Paper`, `Circuit`, `Matter`, `Policy`, `Dataset`, `Security`, `Capability`, or `Implementation`, stop and move that concept back into its pack.
