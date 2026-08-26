@@ -1,0 +1,135 @@
+name: Independent uv public attestation proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/uv-public-attestation-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  attestations: read
+  packages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      UV_TAG: ghcr.io/astral-sh/uv:0.12.3-python3.13-trixie-slim
+      UV_DIGEST: sha256:5f3c58899cb4ab5b723f81641d6aed08968e6c93f9a84641321ae66ba7103f42
+      UV_REPO: astral-sh/uv
+      SLSA_PREDICATE: https://slsa.dev/provenance/v1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show verifier versions
+        run: |
+          gh --version
+          docker --version
+          docker buildx version
+
+      - name: Authenticate to public GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Require pinned tag to resolve to expected digest
+        run: |
+          docker buildx imagetools inspect "$UV_TAG" | tee uv-image-inspect.txt
+          resolved="$(awk '/^Digest:/ {print $2; exit}' uv-image-inspect.txt)"
+          echo "resolved_digest=$resolved"
+          test "$resolved" = "$UV_DIGEST"
+
+      - name: Cryptographically verify SLSA attestation for exact OCI subject
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify "oci://ghcr.io/astral-sh/uv@$UV_DIGEST" \
+            --repo "$UV_REPO" \
+            --predicate-type "$SLSA_PREDICATE" \
+            --format json > uv-attestation-verification.json
+          test -s uv-attestation-verification.json
+
+      - name: Enforce exact subject and write bounded checkpoint
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import platform
+          import subprocess
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          digest = os.environ['UV_DIGEST']
+          digest_hex = digest.removeprefix('sha256:')
+          predicate = os.environ['SLSA_PREDICATE']
+          repo = os.environ['UV_REPO']
+          rows = json.loads(Path('uv-attestation-verification.json').read_text())
+          assert isinstance(rows, list) and rows, rows
+
+          matched = []
+          source_repositories = set()
+          signer_workflows = set()
+          for row in rows:
+              result = row.get('verificationResult') or {}
+              statement = result.get('statement') or {}
+              assert statement.get('predicateType') == predicate, statement.get('predicateType')
+              subjects = statement.get('subject') or []
+              subject_match = any(
+                  isinstance(subject, dict)
+                  and isinstance(subject.get('digest'), dict)
+                  and subject['digest'].get('sha256') == digest_hex
+                  for subject in subjects
+              )
+              if not subject_match:
+                  continue
+              matched.append(row)
+              certificate = ((result.get('signature') or {}).get('certificate') or {})
+              for key in ('sourceRepository', 'SourceRepository'):
+                  value = certificate.get(key)
+                  if value:
+                      source_repositories.add(str(value))
+              for key in ('workflowRef', 'WorkflowRef', 'workflowName', 'WorkflowName'):
+                  value = certificate.get(key)
+                  if value:
+                      signer_workflows.add(str(value))
+
+          assert matched, 'no verified attestation binds the exact pinned uv digest'
+          gh_version = subprocess.check_output(['gh', '--version'], text=True).splitlines()[0]
+          checkpoint = {
+              'schema_version': 1,
+              'proof_kind': 'independent_public_oci_slsa_verification',
+              'verified_at': datetime.now(timezone.utc).isoformat(),
+              'artifact_tag': os.environ['UV_TAG'],
+              'artifact_digest': digest,
+              'repository_scope': repo,
+              'predicate_type': predicate,
+              'verified_attestation_count': len(matched),
+              'exact_subject_digest_match': True,
+              'tag_digest_match': True,
+              'verifier': gh_version,
+              'runner': platform.platform(),
+              'certificate_source_repositories_observed': sorted(source_repositories),
+              'certificate_workflow_values_observed': sorted(signer_workflows),
+              'result': 'PASS_INDEPENDENT_PUBLIC_UV_OCI_SLSA_VERIFICATION',
+              'boundaries': [
+                  'This proves cryptographic attestation verification for the exact public OCI digest under the astral-sh/uv repository identity policy.',
+                  'This does not prove Refinery private-branch adapter execution.',
+                  'This does not transfer provenance to a sibling Git implementation.',
+                  'This does not establish software correctness, deployment, adoption, recommendation, external value, or reuse rights.'
+              ],
+          }
+          Path('uv-public-verification-checkpoint.json').write_text(json.dumps(checkpoint, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(checkpoint, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload independent verification packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-public-attestation-proof
+          path: |
+            uv-image-inspect.txt
+            uv-attestation-verification.json
+            uv-public-verification-checkpoint.json
+          if-no-files-found: error
+          retention-days: 30
