@@ -178,7 +178,8 @@ def _sha256_from_implementation(implementation: Artifact) -> str | None:
     identity = implementation.payload.get("implementation_identity")
     if not isinstance(identity, Mapping):
         return None
-    digest = str(identity.get("digest") or "").strip()
+    source = identity.get("source") if isinstance(identity.get("source"), Mapping) else {}
+    digest = str(identity.get("digest") or source.get("digest") or "").strip()
     if digest.startswith("sha256:") and len(digest) == 71:
         return digest.removeprefix("sha256:")
     return None
@@ -271,6 +272,164 @@ def assertions_for_subject(engine: CitationEngine, subject_ref: str) -> tuple[As
     return tuple(rows)
 
 
+def ingest_compiled_registry(
+    engine: CitationEngine,
+    compiled: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Ingest Refinery's current compiled `rcap/rimpl/rclaim/rregistry` output.
+
+    Imported claim records are intentionally conservative: they become OBSERVED
+    assertions over canonical evidence-pointer Artifacts. A normalized Refinery
+    provenance claim saying `verified` is not independently re-verified here; raw
+    SLSA/attestation material must still pass `record_exact_provenance_claim()` to
+    become a CE `VERIFIED` provenance assertion.
+    """
+    if not isinstance(compiled, Mapping):
+        raise TypeError("compiled registry must be a mapping")
+    registry_id = _nonempty(compiled.get("registry_id"), "registry_id")
+    capsules = compiled.get("capsules")
+    implementations = compiled.get("implementations")
+    claims = compiled.get("claims")
+    if not isinstance(capsules, list) or not isinstance(implementations, list) or not isinstance(claims, list):
+        raise ValueError("compiled registry requires capsules, implementations, and claims lists")
+
+    registry = engine.record_artifact(Artifact(
+        id=registry_id,
+        kind="refinery.registry_snapshot",
+        payload={
+            "schema_version": compiled.get("schema_version"),
+            "registry_id": registry_id,
+            "metadata": dict(compiled.get("metadata") or {}),
+            "counts": {
+                "capsules": len(capsules),
+                "implementations": len(implementations),
+                "claims": len(claims),
+            },
+        },
+        provenance=Provenance(
+            source="refinery-commons",
+            method="compiled-registry-import",
+        ),
+    ))
+
+    capability_refs: list[str] = []
+    for row in capsules:
+        if not isinstance(row, Mapping):
+            raise ValueError("compiled capsule rows must be mappings")
+        object_id = _nonempty(row.get("object_id"), "compiled capsule object_id")
+        intrinsic = row.get("intrinsic")
+        if not isinstance(intrinsic, Mapping):
+            raise ValueError("compiled capsule intrinsic must be a mapping")
+        engine.record_artifact(Artifact(
+            id=object_id,
+            kind="refinery.capability",
+            payload={
+                "intrinsic": dict(intrinsic),
+                "metadata": dict(row.get("metadata") or {}),
+                "refinery_key": row.get("key"),
+            },
+            provenance=Provenance(
+                source="refinery-commons",
+                method="compiled-capability-import",
+                parent_refs=(registry.id,),
+            ),
+        ))
+        capability_refs.append(object_id)
+
+    implementation_refs: list[str] = []
+    for row in implementations:
+        if not isinstance(row, Mapping):
+            raise ValueError("compiled implementation rows must be mappings")
+        object_id = _nonempty(row.get("object_id"), "compiled implementation object_id")
+        capsule_id = _nonempty(row.get("capsule_id"), "compiled implementation capsule_id")
+        engine.store.require(capsule_id)
+        intrinsic = row.get("intrinsic")
+        if not isinstance(intrinsic, Mapping):
+            raise ValueError("compiled implementation intrinsic must be a mapping")
+        engine.record_artifact(Artifact(
+            id=object_id,
+            kind="refinery.implementation",
+            payload={
+                "capability_ref": capsule_id,
+                "implementation_identity": dict(intrinsic),
+                "metadata": dict(row.get("metadata") or {}),
+                "refinery_key": row.get("key"),
+            },
+            provenance=Provenance(
+                source="refinery-commons",
+                method="compiled-implementation-import",
+                parent_refs=(capsule_id, registry.id),
+            ),
+        ))
+        implementation_refs.append(object_id)
+
+    evidence_refs: list[str] = []
+    assertion_refs: list[str] = []
+    for row in claims:
+        if not isinstance(row, Mapping):
+            raise ValueError("compiled claim rows must be mappings")
+        claim_id = _nonempty(row.get("object_id"), "compiled claim object_id")
+        subject_id = _nonempty(row.get("subject_id"), "compiled claim subject_id")
+        engine.store.require(subject_id)
+        intrinsic = row.get("intrinsic")
+        if not isinstance(intrinsic, Mapping):
+            raise ValueError("compiled claim intrinsic must be a mapping")
+        claim_type = _nonempty(intrinsic.get("claim_type"), "compiled claim_type")
+        outcome = _nonempty(intrinsic.get("outcome"), "compiled claim outcome")
+        evidence_locator = _nonempty(intrinsic.get("evidence_ref"), "compiled claim evidence_ref")
+        issuer = str(intrinsic.get("issuer") or "refinery-claim-import").strip() or "refinery-claim-import"
+        pointer_id = "refinery:evidence-pointer:" + canonical_hash({
+            "evidence_ref": evidence_locator,
+            "issuer": issuer,
+        })
+        pointer = engine.record_artifact(Artifact(
+            id=pointer_id,
+            kind="refinery.evidence_pointer",
+            payload={
+                "evidence_ref": evidence_locator,
+                "issuer": issuer,
+            },
+            provenance=Provenance(
+                source=issuer,
+                method="imported-evidence-pointer",
+                locator=evidence_locator,
+                parent_refs=(registry.id,),
+            ),
+        ))
+        evidence_refs.append(pointer.id)
+
+        assertion = record_claim(
+            engine,
+            assertion_id=f"{claim_id}:assertion",
+            subject_ref=subject_id,
+            predicate=f"refinery.claim.{claim_type}",
+            value={
+                "outcome": outcome,
+                "payload": dict(intrinsic.get("payload") or {}),
+                "issuer": issuer,
+                "observed_at": intrinsic.get("observed_at"),
+                "refinery_claim_id": claim_id,
+            },
+            status=EpistemicStatus.OBSERVED,
+            basis_refs=(pointer.id,),
+            relation=CitationRelation.SUPPORTS,
+            produced_by="refinery-compiled-registry-import",
+        )
+        assertion_refs.append(assertion.id)
+
+    return {
+        "registry_ref": registry.id,
+        "capability_refs": tuple(capability_refs),
+        "implementation_refs": tuple(implementation_refs),
+        "assertion_refs": tuple(assertion_refs),
+        "evidence_refs": tuple(dict.fromkeys(evidence_refs)),
+        "boundary": (
+            "Imported Refinery claims remain observed records. Curation does not authorize recommendation, "
+            "and normalized provenance does not become independently verified without exact raw evidence."
+        ),
+    }
+
+
 def make_curation_pack(*, curation_basis_ref: str) -> ContextPack:
     """Keep evidence maturity separate from explicit recommendation authority."""
     basis_ref = _nonempty(curation_basis_ref, "curation_basis_ref")
@@ -328,6 +487,7 @@ __all__ = [
     "assertions_for_subject",
     "capability_ref",
     "implementation_ref",
+    "ingest_compiled_registry",
     "issue_review_receipt",
     "make_curation_pack",
     "record_capability",
