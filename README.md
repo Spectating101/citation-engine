@@ -4,9 +4,9 @@
 
 > Citation here is a systems principle, not a bibliography feature: **nothing consequential should exist without an inspectable basis.**
 
-Citation Engine extracts the recurring trust architecture independently implemented across Cite-Agent, Policy Lab, Nocturnal, Hardware Splicer, Research Drive, and Sharpe Alpha. Those products remain separate domain systems. They are clients and adversarial validation cases for the engine rather than modules compiled into it.
+Citation Engine extracts the recurring trust architecture independently implemented across Cite-Agent, Policy Lab, Nocturnal, Hardware Splicer, Research Drive, Sharpe Alpha, and now pressure-tested against Refinery Commons. Those products remain separate domain systems. They are clients and adversarial validation cases for the engine rather than modules compiled into it.
 
-**Status:** v0.1 reusable kernel seed after six-domain extraction and completed Phase 3 persistence/interchange work. Not a production framework yet.
+**Status:** v0.1 reusable kernel seed after seven-domain pressure testing and completed Phase 3 persistence/interchange work. Not a production framework yet.
 
 ## Core flow
 
@@ -84,44 +84,47 @@ from citation_engine import export_bundle
 bundle = export_bundle(engine.store, ["receipt:workflow-result"])
 ```
 
-See [`docs/REUSE.md`](docs/REUSE.md) and [`examples/minimal_seed.py`](examples/minimal_seed.py).
+See [`docs/REUSE.md`](docs/REUSE.md), [`docs/REFINERY_INTEGRATION.md`](docs/REFINERY_INTEGRATION.md), and [`examples/minimal_seed.py`](examples/minimal_seed.py).
 
 ## Domain attachment
 
 ```text
-                           CONTEXT PACKS
-   ┌────────┬────────┬──────────┬────────┬────────┬────────┐
-   │  Cite  │ Policy │Nocturnal │   HS   │ Drive  │ Sharpe │
-   │ tools  │ rules  │ feeds    │ tools  │ data   │ gates  │
-   │ MCP    │ gates  │ gates    │ gates  │ gates  │ models │
-   └────┬───┴────┬───┴────┬─────┴────┬───┴────┬───┴────┬───┘
-        └────────┴─────────┴──────┬───┴────────┴────────┘
-                                  ▼
-                        ┌───────────────────┐
-                        │  CITATION ENGINE  │
-                        │ Artifact          │
-                        │ Provenance        │
-                        │ Citation          │
-                        │ Assertion         │
-                        │ Gate / Decision   │
-                        │ Authority         │
-                        │ Revision          │
-                        │ Receipt           │
-                        └───────────────────┘
+                               CONTEXT PACKS
+   ┌────────┬────────┬──────────┬────────┬────────┬────────┬──────────┐
+   │  Cite  │ Policy │Nocturnal │   HS   │ Drive  │ Sharpe │ Refinery │
+   │ tools  │ rules  │ feeds    │ tools  │ data   │ gates  │ Commons  │
+   │ MCP    │ gates  │ gates    │ gates  │ gates  │ models │ evidence │
+   └────┬───┴────┬───┴────┬─────┴────┬───┴────┬───┴────┬───┴────┬─────┘
+        └────────┴─────────┴──────┴────────┴────────┴───────┬──────┘
+                                                            ▼
+                                                  ┌───────────────────┐
+                                                  │  CITATION ENGINE  │
+                                                  │ Artifact          │
+                                                  │ Provenance        │
+                                                  │ Citation          │
+                                                  │ Assertion         │
+                                                  │ Gate / Decision   │
+                                                  │ Authority         │
+                                                  │ Revision          │
+                                                  │ Receipt           │
+                                                  └───────────────────┘
 ```
 
-MCP, HTTP, CLI, model calls, compilers, search APIs, sensors, policy calculators, data procurement runtimes, and backtest engines are **capability transports/execution backends or domain runtimes**. They may retrieve, calculate, simulate, compile, classify, verify a transfer, or render. They do not automatically promote observations or hypotheses into authoritative facts.
+MCP, HTTP, CLI, model calls, compilers, search APIs, sensors, policy calculators, data procurement runtimes, backtest engines, supply-chain verifiers, and registries are **capability transports/execution backends or domain runtimes**. They may retrieve, calculate, simulate, compile, classify, verify an artifact, verify a transfer, or render. They do not automatically promote observations or hypotheses into authoritative facts.
 
 ## Current pressure tests
 
-The neutral core has been exercised by thin adapters for six deliberately different clients:
+The neutral core has been exercised by thin adapters for seven deliberately different clients:
 
 - **Cite:** evidence-backed claims and locator-bearing support edges;
 - **Hardware Splicer:** physical measurement gates and operational authorization;
 - **Nocturnal:** append-only corrections and fail-closed publication authorization;
 - **Policy Lab:** deterministic constraint decisions whose audit receipt may change without changing decision identity;
 - **Research Drive:** source/custody verification kept separate from operational query readiness;
-- **Sharpe Alpha:** attractive backtest output kept separate from provenance and promotion authority.
+- **Sharpe Alpha:** attractive backtest output kept separate from provenance and promotion authority;
+- **Refinery Commons:** semantic capability versus concrete realization identity, exact-subject anti-laundering, contradictory evidence preservation, explicit curation authority, and cross-domain reuse without adding core ontology.
+
+The Refinery pressure test deliberately keeps its Commons evidence-maturity model and software/institutional nouns outside `src/citation_engine/`. It adds no new kernel primitive. See [`docs/REFINERY_INTEGRATION.md`](docs/REFINERY_INTEGRATION.md).
 
 The Research Drive / Sharpe pressure test required **no new core primitive**. Readiness and promotion remain domain gate outcomes rather than kernel state types.
 
@@ -133,7 +136,7 @@ Phase 3 then added reuse infrastructure without adding domain ontology:
 - `validate_store()` for third-party store conformance;
 - a minimal fresh-project seed example.
 
-The Phase 3 targeted suite passes 18 tests; the same reconstruction plus the original eight neutral invariant tests passes 26. Earlier six-domain adapter pressure tests remain separately validated. See [`docs/STATUS.md`](docs/STATUS.md) for the execution/CI caveat.
+The Phase 3 targeted suite passes 18 tests; the same reconstruction plus the original eight neutral invariant tests passes 26. Earlier adapter pressure tests remain separately validated. Refinery integration execution is gated by native repository CI rather than being claimed from an unavailable local GitHub checkout. See [`docs/STATUS.md`](docs/STATUS.md) for the execution/CI caveat.
 
 The adapters live under `examples/packs/`; domain nouns are intentionally absent from `src/citation_engine/`.
 
@@ -168,4 +171,4 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/EXTRACTION_MAP.md`](docs/EXTRACTION_MAP.md), [`docs/PACK_SPEC.md`](docs/PACK_SPEC.md), [`docs/REUSE.md`](docs/REUSE.md), and [`docs/STATUS.md`](docs/STATUS.md).
+Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/EXTRACTION_MAP.md`](docs/EXTRACTION_MAP.md), [`docs/PACK_SPEC.md`](docs/PACK_SPEC.md), [`docs/REUSE.md`](docs/REUSE.md), [`docs/REFINERY_INTEGRATION.md`](docs/REFINERY_INTEGRATION.md), and [`docs/STATUS.md`](docs/STATUS.md).
