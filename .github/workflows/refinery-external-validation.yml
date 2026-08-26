@@ -1,0 +1,144 @@
+name: Independent Refinery Closure Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/refinery-external-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13']
+    defaults:
+      run:
+        working-directory: alpha-platform/experiments/slop-refinery-poc
+    steps:
+      - name: Checkout exact Refinery RC branch
+        uses: actions/checkout@v4
+        with:
+          repository: Spectating101/alpha-platform
+          ref: release/refinery-closure-2026q3
+          path: alpha-platform
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install full Refinery runtime
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[gateway,graphql,test]'
+
+      - name: Compile and run full Refinery suite
+        run: |
+          python -m compileall -q refinery tests
+          python -m unittest discover -s tests -v
+
+      - name: Execute GraphQL runtime
+        run: |
+          python - <<'PY'
+          from refinery.workbench_graphql_api_v3 import build_schema
+          schema = build_schema()
+          result = schema.execute_sync('{ topology { id kind title } provenanceMap { id kind title } }')
+          if result.errors:
+              raise SystemExit(result.errors)
+          if not result.data or not result.data.get('topology') or not result.data.get('provenanceMap'):
+              raise SystemExit('expected workbench GraphQL closure modules missing')
+          print(result.data)
+          PY
+
+      - name: Serve and fetch Commons UI
+        run: |
+          python -m http.server 8765 --directory prototypes/commons-web-v0 >/tmp/refinery-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid' EXIT
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8765/ >/tmp/refinery-index.html; then
+              break
+            fi
+            sleep 0.5
+          done
+          grep -qi 'capabil' /tmp/refinery-index.html
+          grep -qi 'implementation' /tmp/refinery-index.html
+
+      - name: Build closure bundle twice
+        run: |
+          slop-refinery-closure-bundle /tmp/refinery-closure-a
+          slop-refinery-closure-bundle /tmp/refinery-closure-b
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a = json.loads(Path('/tmp/refinery-closure-a/MANIFEST.json').read_text())
+          b = json.loads(Path('/tmp/refinery-closure-b/MANIFEST.json').read_text())
+          assert a['bundle_sha256'] == b['bundle_sha256']
+          print(a['bundle_sha256'])
+          PY
+
+      - name: Upload closure artifact
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-refinery-closure-candidate
+          path: /tmp/refinery-closure-a/
+          if-no-files-found: error
+          retention-days: 30
+
+  real-uv-machine-evidence:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: alpha-platform/experiments/slop-refinery-poc
+    steps:
+      - name: Checkout exact Refinery RC branch
+        uses: actions/checkout@v4
+        with:
+          repository: Spectating101/alpha-platform
+          ref: release/refinery-closure-2026q3
+          path: alpha-platform
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Refinery
+        run: pip install -e '.[test]'
+
+      - name: Acquire and verify real uv packet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf /tmp/refinery-uv-machine-evidence
+          python -m refinery.commons_uv_packet_acquisition_v0 /tmp/refinery-uv-machine-evidence
+
+      - name: Require exact-subject PASS
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          checkpoint = json.loads(Path('/tmp/refinery-uv-machine-evidence/acquisition_checkpoint.json').read_text())
+          assert checkpoint['status'] == 'PASS_REAL_UV_MACHINE_PACKET_VERIFIED_AND_INGESTED', checkpoint
+          result = json.loads(Path('/tmp/refinery-uv-machine-evidence/uv_adapter_ingestion_result.json').read_text())
+          assert result['result'] == 'REAL_UV_SLSA_PACKET_VERIFIED_AND_INGESTED', result
+          print(checkpoint)
+          PY
+
+      - name: Upload real evidence packet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-refinery-real-uv-evidence
+          path: /tmp/refinery-uv-machine-evidence/
+          if-no-files-found: error
+          retention-days: 30
