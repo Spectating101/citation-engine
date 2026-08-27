@@ -85,7 +85,7 @@ def registrable_with_psl(domain: str | None, rules: Rules) -> str | None:
         return None
 
     exception_len = None
-    best_len = 1  # implicit default rule '*'
+    best_len = 1
     for i in range(len(labels)):
         suffix = ".".join(labels[i:])
         label_count = len(labels) - i
@@ -106,12 +106,7 @@ def registrable_with_psl(domain: str | None, rules: Rules) -> str | None:
 
 
 def registrable_generic_rebuild(domain: str | None) -> str | None:
-    """Generic code-only reconstruction with no accumulated PSL rule asset.
-
-    It implements the obvious default-rule behavior: a suffix is one final label,
-    so the registrable domain is the last two labels. This arm intentionally has
-    no curated knowledge of multi-level suffixes, wildcard rules, or exceptions.
-    """
+    """Generic code-only reconstruction with no accumulated PSL rule asset."""
     if domain is None or domain.startswith("."):
         return None
     labels = domain.lower().split(".")
@@ -149,12 +144,11 @@ def main() -> None:
         raise SystemExit("upstream license is not the predeclared MPL-2.0 text")
     if "Any copyright is dedicated to the Public Domain." not in tests_text:
         raise SystemExit("official test corpus no longer carries the predeclared public-domain notice")
-    if "Mozilla Public" not in list_text.splitlines()[0:8].__str__():
+    if "Mozilla Public" not in str(list_text.splitlines()[0:8]):
         raise SystemExit("PSL data file no longer carries the expected MPL notice near its header")
 
     tests = parse_tests(tests_text)
     rules = parse_rules(list_text)
-
     reuse = evaluate("authorized_reuse_of_curated_psl", lambda d: registrable_with_psl(d, rules), tests)
     rebuild = evaluate("generic_code_only_rebuild_without_psl_asset", registrable_generic_rebuild, tests)
 
@@ -182,7 +176,7 @@ def main() -> None:
         "authorization": {
             "reuse_basis": "MPL-2.0 license attached to publicsuffix/list and public_suffix_list.dat",
             "test_corpus_basis": "CC0/public-domain dedication stated in tests/test_psl.txt",
-            "direct_owner_contact": false,
+            "direct_owner_contact": False,
             "boundary": "This experiment relies only on the rights granted by the published licenses/notices and claims no broader permission.",
         },
         "capability": "derive registrable domain / eTLD+1-like boundary from a hostname",
