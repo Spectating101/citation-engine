@@ -58,6 +58,16 @@ class Rules:
     exception: frozenset[str]
 
 
+def idna_ascii(name: str) -> str:
+    return ".".join(label.encode("idna").decode("ascii") for label in name.split("."))
+
+
+def add_rule_forms(target: set[str], rule: str) -> None:
+    target.add(rule)
+    ascii_rule = idna_ascii(rule)
+    target.add(ascii_rule)
+
+
 def parse_rules(text: str) -> Rules:
     exact: set[str] = set()
     wildcard: set[str] = set()
@@ -68,11 +78,11 @@ def parse_rules(text: str) -> Rules:
             continue
         line = line.lower()
         if line.startswith("!"):
-            exception.add(line[1:])
+            add_rule_forms(exception, line[1:])
         elif line.startswith("*."):
-            wildcard.add(line[2:])
+            add_rule_forms(wildcard, line[2:])
         else:
-            exact.add(line)
+            add_rule_forms(exact, line)
     return Rules(frozenset(exact), frozenset(wildcard), frozenset(exception))
 
 
@@ -182,7 +192,7 @@ def main() -> None:
         "capability": "derive registrable domain / eTLD+1-like boundary from a hostname",
         "scarce_asset_hypothesis": "the matching algorithm is generic, while the maintained multi-level/wildcard/exception suffix knowledge is accumulated curated state",
         "design": {
-            "reuse_arm": "same bounded lookup logic supplied with the pinned curated PSL rule asset",
+            "reuse_arm": "same bounded lookup logic supplied with the pinned curated PSL rule asset; Unicode rules are deterministically mirrored into standard-library IDNA ASCII form for equivalent punycode inputs",
             "rebuild_arm": "generic code-only default-rule heuristic with no PSL entries, wildcard knowledge, or exceptions",
             "evaluator": "official publicsuffix/list tests/test_psl.txt at the same pinned commit",
             "primary_metric": "exact expected registrable-domain match rate",
@@ -190,10 +200,10 @@ def main() -> None:
             "timing_boundary": "elapsed_ns is diagnostic only and is not used for the verdict",
         },
         "rule_inventory": {
-            "exact": len(rules.exact),
-            "wildcard": len(rules.wildcard),
-            "exception": len(rules.exception),
-            "total": len(rules.exact) + len(rules.wildcard) + len(rules.exception),
+            "exact_and_idna_forms": len(rules.exact),
+            "wildcard_and_idna_forms": len(rules.wildcard),
+            "exception_and_idna_forms": len(rules.exception),
+            "total_stored_forms": len(rules.exact) + len(rules.wildcard) + len(rules.exception),
         },
         "official_test_cases": len(tests),
         "arms": [reuse, rebuild],
