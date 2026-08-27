@@ -1,0 +1,52 @@
+name: Refinery PSL authorized reuse experiment
+
+on:
+  pull_request:
+    paths:
+      - 'validation/refinery_psl_authorized_reuse_v1.py'
+      - '.github/workflows/refinery-psl-authorized-reuse-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute predeclared rights-clean comparison
+        run: python validation/refinery_psl_authorized_reuse_v1.py
+      - name: Require bounded verdict and inspect result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('refinery-psl-authorized-reuse-result.json').read_text())
+          assert result['predeclared_upstream']['commit'] == 'e8c9a2b2b2856b6449999dd0ec0d118f364ed0cd'
+          assert result['authorization']['direct_owner_contact'] is False
+          assert result['official_test_cases'] > 0
+          assert result['arms'][0]['fail_count'] == 0, result['arms'][0]['failures']
+          assert result['verdict'] in {
+              'AUTHORIZED_CURATED_ASSET_CORRECTNESS_ADVANTAGE_ESTABLISHED',
+              'NO_AUTHORIZED_REUSE_ADVANTAGE_ESTABLISHED',
+              'PARTIAL_AUTHORIZED_REUSE_ADVANTAGE_REQUIRES_REVIEW',
+          }
+          print(json.dumps({
+              'verdict': result['verdict'],
+              'reuse_accuracy': result['arms'][0]['accuracy'],
+              'rebuild_accuracy': result['arms'][1]['accuracy'],
+              'accuracy_delta': result['accuracy_delta'],
+              'rules': result['rule_inventory'],
+          }, indent=2, sort_keys=True))
+          PY
+      - name: Upload experiment packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: refinery-psl-authorized-reuse-v1
+          path: refinery-psl-authorized-reuse-result.json
+          if-no-files-found: error
+          retention-days: 30
